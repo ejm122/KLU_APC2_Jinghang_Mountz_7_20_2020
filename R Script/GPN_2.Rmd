@@ -1,32 +1,91 @@
 ---
 title: "GPN_2"
+author: "Li Jinghang, Ellie Mountz"
+date: "7/20/2020"
 output:
-  html_document: default
-  pdf_document: default
+  html_document:
+    df_print: paged
+  pdf_document:
+    fig_width: 7
+    fig_height: 6
+    fig_caption: yes
+    df_print: kable
+    geometry: margin=1in
+    fontsize: 11pt
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
+
 ``` {r dataCollect, echo = FALSE}
+rm(list=ls())
+dev.off()
+pacman::p_load(rio)
+library(tibble)
 # IMPORTING Data ###########################################################
-data <- read.table("~/Desktop/Github/Mean_Activation_AI/KLU_APC2_Master_2020_07_01.csv", header = TRUE, sep = ",")
-
+data <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/KLU_APC2_Master_2020_07_01.xlsx")
+Scan_Number <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/NormalAging_DataGathering.xlsx")
+activation <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/activ_values.txt")
+AI <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/AI.txt")
+FWHM <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/FWHM.txt")
+FWHM <- abs(FWHM)
 # Filter Data ##############################################################
-data <- data[data$FaceNames_Exclude != "Yes" & data$Visit_Relative == 1,] #Issues with face name data and only 1 scan/subject - 87 observations
+data <- data[-c(which(data$FaceNames_Exclude == 'Yes')),] #Exclude for scanning issues
 
+list <- match(Scan_Number$ScanID,data$Vault_Scan_ID) #Only include 1 scan/subject
+index <- which(list!=0,arr.ind = T)
+list <- na.omit(match(Scan_Number$ScanID, data$Vault_Scan_ID))
+data$Scan_Number <- NA
+data$Scan_Number[list] <- Scan_Number$`Scan Number`[index]
+data <- data[c(which(data$Scan_Number == 1)),]
+
+list <- match(activation$Scan_ID,data$Vault_Scan_ID) #Match up all calculated valuese with correct scan
+index <- which(list!=0,arr.ind = T)
+list <- na.omit(match(activation$Scan_ID, data$Vault_Scan_ID))
+
+#creating new variables that are going to be appended
+data$Subject_ID <- NA
+data$Scan_ID <- NA
+data$Left_Hippocampus_Activation <- NA
+data$Right_Hippocampus_Activation <- NA
+data$Left_DLPFC_Activation <- NA
+data$Right_DLPFC_Activation <- NA
+data$Hippocampus_AI <- NA
+data$DLPFC_AI <-NA
+data$Left_Hippocampus_FWHM <- NA
+data$Right_Hippocampus_FWHM <- NA
+data$Left_DLPFC_FWHM <- NA
+data$Right_DLPFC_FWHM <- NA
+
+#appending
+data$Subject_ID[list] <- activation$Subject_ID[index]
+data$Scan_ID[list] <- activation$Scan_ID[index]
+data$Left_Hippocampus_Activation[list] <- activation[,3][index]
+data$Right_Hippocampus_Activation[list] <- activation[,4][index]
+data$Left_DLPFC_Activation[list] <- activation[,5][index]
+data$Right_DLPFC_Activation[list] <- activation[,6][index]
+data$Hippocampus_AI[list] <- AI[,3][index]
+data$DLPFC_AI[list] <- AI[,4][index]
+
+data$Left_Hippocampus_FWHM[list] <- FWHM[,3]
+data$Right_Hippocampus_FWHM[list] <- FWHM[,4]
+data$Left_DLPFC_FWHM[list] <- FWHM[,5]
+data$Right_DLPFC_FWHM[list] <- FWHM[,6]
 # Recode Variables ##############################################################
 data$Race_cat <- data$Race != 'White' #not white = 1 (True)
 data$Education_cat <- data$Education > 12  #higher education = 1 (True)
 data$Sex_cat <- (data$Sex == 'Male') #1 = male
-data$Sex_cat[data$Sex == ""] = NA
+data$Sex_cat[data$Sex == "NaN"] = NA
 data$LETTER_FLUENCY <- (data$FLUENA + data$FLUENF+ data$FLUENS) / 3
 data$STRINTERFERENCE <- (data$STRCW - data$STRCOL) / data$STRCOL
 data$PiB_STATUS_CODE <- (data$PiBStatus_SUVR_GTM_FS_Global == "pos")
-data$PiB_STATUS_CODE[data$PiBStatus_SUVR_GTM_FS_Global == ""] = NA
-data$APOE_CODE[data$APOE_CODE == ""] = NA
+data$PiB_STATUS_CODE[data$PiBStatus_SUVR_GTM_FS_Global == "NaN"] = NA
+data$APOE_CODE[data$APOE_CODE == "NaN"] = NA
 data$Abs_Hippocampus_AI <- abs(data$Hippocampus_AI)
 data$Abs_DLPFC_AI <- abs(data$DLPFC_AI)
+data$FaceName_PostScanAccuracy[data$FaceName_PostScanAccuracy == "NA"] <- NA
+data$FaceName_PostScanAccuracy <- as.numeric(data$FaceName_PostScanAccuracy)
 
 # Cognitive Data Normalization ##################################################
 #Memory
@@ -78,6 +137,41 @@ data$executive <- (TRAILBS_Z_INV +SPANSB_Z) / 2
 data$attention <- (TRAILAS_Z_INV + SPANSF_Z) / 2
 data$executive_attention <- (TRAILAS_Z_INV + TRAILBS_Z_INV + SPANSF_Z + SPANSB_Z + DIGSYMWR_Z) / 5
 
+#Citation Notes: - add n values
+#Our sample: avg age: 74.8; >12 yrs education: 72%, avg. education: 14.897
+
+#doi: 10.1136/jnnp.2004.045567 - avg. age (for normal subjects): 79.5; >12 yrs education: 61.5%
+#Most means from this source are more low/poor compared to our sample
+
+# Z Transform ####################################################################
+#Negative z value means that lower value = higher performance
+# doi:10.1016/j.jalz.2017.12.003 - method of composite calculation
+#doi/ 10.1136/jnnp.2004.045567 - standard deviations from normative data
+REYIM_Z <- (data$REYIM-REYIM_Mean) / 4.8
+REYDE_Z <- (data$REYDE-REYDE_Mean) / 4.8
+REYCO_Z <- (data$REYCO-REYCO_Mean) / 2.1
+BLOCKDES_Z <- (data$BLOCKDES-BLOCKDES_Mean) / 4.8
+BOSTON1_Z <-(data$BOSTON1-BOSTON1_Mean) / 2.6
+FLUEN_Z <- (data$FLUEN-FLUEN_Mean) / 4.8
+TRAILAS_Z <- (data$TRAILAS-TRAILAS_Mean) / 17.5
+TRAILAS_Z_INV <- -1*TRAILAS_Z
+SPANSF_Z <- (data$SPANSF-SPANSF_Mean) / 1.2
+SPANSB_Z <- (data$SPANSB-SPANSB_Mean) / 1.2
+TRAILBS_Z <- (data$TRAILBS-TRAILBS_Mean) / 49.3
+TRAILBS_Z_INV <- -1*TRAILBS_Z
+DIGSYMWR_Z <- (data$DIGSYMWR-DIGSYMWR_Mean) / 12.3
+
+# Domain Scores #########################################################################
+#doi:10.1016/j.jalz.2017.12.003., doi:10.1080/13607860903071014. (Both Beth Snitz articles), https://www.ncbi.nlm.nih.gov/books/NBK285344/ - for SPANSB in Executive
+data$memory <- (REYIM_Z + REYDE_Z) /2
+data$visiospatial <- (REYCO_Z + BLOCKDES_Z)/2
+data$language <- (BOSTON1_Z +FLUEN_Z) / 2
+data$executive <- (TRAILBS_Z_INV +SPANSB_Z) / 2
+data$attention <- (TRAILAS_Z_INV + SPANSF_Z) / 2
+data$executive_attention <- (TRAILAS_Z_INV + TRAILBS_Z_INV + SPANSF_Z + SPANSB_Z + DIGSYMWR_Z) / 5
+```
+
+``` {r intraclass_correlation, echo = FALSE}
 #Intraclass Correlation ################################################################
 # Pearson (Linear Correlation between composite and raw scores)
 library("irr")
@@ -107,33 +201,6 @@ TRAILAS_Combo_Pearson_Correlation <- cor(data$executive_attention, -1*data$TRAIL
 SPANSF_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSF, use = "complete.obs")
 DIGSYMWR_Combo_Pearson_Correlation <- cor(data$executive_attention, data$DIGSYMWR, use = "complete.obs")
 SPANSB_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSB, use = "complete.obs")
-
-#Interclass Correlation (correlation between z-scores within composite score) ########3
-#https://www.datanovia.com/en/lessons/intraclass-correlation-coefficient-in-r/
-memory_icc_scores <-  cbind(REYIM_Z, REYDE_Z)
-memory_icc_values <- icc(memory_icc_scores, model = "twoway", type = "agreement", unit = "single")
-memory_icc <- memory_icc_values$value
-
-visiospatial_icc_scores <- cbind(REYCO_Z,BLOCKDES_Z)
-visiospatial_icc_values <- icc(visiospatial_icc_scores, model = "twoway", type = "agreement", unit = "single")
-visiospatial_icc <- visiospatial_icc_values$value
-
-language_icc_scores <- cbind(BOSTON1_Z,FLUEN_Z)
-language_icc_values <- icc(language_icc_scores, model = "twoway", type = "consistency", unit = "single")
-language_icc <- language_icc_values$value
-
-executive_icc_scores <- cbind(TRAILBS_Z_INV,SPANSB_Z)
-executive_icc_values <- icc(executive_icc_scores, model = "twoway", type = "consistency", unit = "single")
-executive_icc <- executive_icc_values$value
-
-attention_icc_scores <- cbind(TRAILAS_Z_INV,SPANSF_Z)
-attention_icc_values <- icc(attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
-attention_icc <- attention_icc_values$value
-
-executive_attention_icc_scores <- cbind(TRAILAS_Z_INV,TRAILBS_Z_INV,SPANSF_Z,SPANSB_Z,DIGSYMWR_Z)
-executive_attention_icc_values <- icc(executive_attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
-executive_attention_icc <- executive_attention_icc_values$value
-
 ```
 
 ``` {r pval_calc, echo = FALSE, include = FALSE}
@@ -329,6 +396,10 @@ kable(demographic_data, caption = "Demographic data for normal aging", digits = 
 
 ```
 
+``` {r render}
+library(rmarkdown)
+render("KLU_APC2_Jinghang_Mountz_Data_Presentation_7_20_2020")
+```
 
 
 
