@@ -1,0 +1,335 @@
+---
+title: "GPN_2"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+``` {r dataCollect, echo = FALSE}
+# IMPORTING Data ###########################################################
+data <- read.table("~/Desktop/Github/Mean_Activation_AI/KLU_APC2_Master_2020_07_01.csv", header = TRUE, sep = ",")
+
+# Filter Data ##############################################################
+data <- data[data$FaceNames_Exclude != "Yes" & data$Visit_Relative == 1,] #Issues with face name data and only 1 scan/subject - 87 observations
+
+# Recode Variables ##############################################################
+data$Race_cat <- data$Race != 'White' #not white = 1 (True)
+data$Education_cat <- data$Education > 12  #higher education = 1 (True)
+data$Sex_cat <- (data$Sex == 'Male') #1 = male
+data$Sex_cat[data$Sex == ""] = NA
+data$LETTER_FLUENCY <- (data$FLUENA + data$FLUENF+ data$FLUENS) / 3
+data$STRINTERFERENCE <- (data$STRCW - data$STRCOL) / data$STRCOL
+data$PiB_STATUS_CODE <- (data$PiBStatus_SUVR_GTM_FS_Global == "pos")
+data$PiB_STATUS_CODE[data$PiBStatus_SUVR_GTM_FS_Global == ""] = NA
+data$APOE_CODE[data$APOE_CODE == ""] = NA
+data$Abs_Hippocampus_AI <- abs(data$Hippocampus_AI)
+data$Abs_DLPFC_AI <- abs(data$DLPFC_AI)
+
+# Cognitive Data Normalization ##################################################
+#Memory
+REYIM_Mean <- 15.4 #doi: 10.1136/jnnp.2004.045567
+REYDE_Mean <- 14.7 #doi: 10.1136/jnnp.2004.045567
+#Visiospatial
+REYCO_Mean <-22.3 #doi: 10.1136/jnnp.2004.045567
+BLOCKDES_Mean <- 11.4 #doi: 10.1136/jnnp.2004.045567
+#Language
+BOSTON1_Mean <- 26.9 #doi: 10.1136/jnnp.2004.045567
+FLUEN_Mean <- 15.6 #doi: 10.1136/jnnp.2004.045567
+#Executive/Attention
+TRAILAS_Mean <- 45.6 #doi: 10.1136/jnnp.2004.045567
+TRAILBS_Mean <-107.5 #doi: 10.1136/jnnp.2004.045567
+SPANSF_Mean <- 6.4 #doi: 10.1136/jnnp.2004.045567
+SPANSB_Mean <- 4.4 #doi: 10.1136/jnnp.2004.045567
+DIGSYMWR_Mean <- 46.8 #doi: 10.1136/jnnp.2004.045567
+
+#Citation Notes: - add n values
+#Our sample: avg age: 74.8; >12 yrs education: 72%, avg. education: 14.897
+
+#doi: 10.1136/jnnp.2004.045567 - avg. age (for normal subjects): 79.5; >12 yrs education: 61.5%
+#Most means from this source are more low/poor compared to our sample
+
+# Z Transform ####################################################################
+#Negative z value means that lower value = higher performance
+# doi:10.1016/j.jalz.2017.12.003 - method of composite calculation
+#doi/ 10.1136/jnnp.2004.045567 - standard deviations from normative data
+REYIM_Z <- (data$REYIM-REYIM_Mean) / 4.8
+REYDE_Z <- (data$REYDE-REYDE_Mean) / 4.8
+REYCO_Z <- (data$REYCO-REYCO_Mean) / 2.1
+BLOCKDES_Z <- (data$BLOCKDES-BLOCKDES_Mean) / 4.8
+BOSTON1_Z <-(data$BOSTON1-BOSTON1_Mean) / 2.6
+FLUEN_Z <- (data$FLUEN-FLUEN_Mean) / 4.8
+TRAILAS_Z <- (data$TRAILAS-TRAILAS_Mean) / 17.5
+TRAILAS_Z_INV <- -1*TRAILAS_Z
+SPANSF_Z <- (data$SPANSF-SPANSF_Mean) / 1.2
+SPANSB_Z <- (data$SPANSB-SPANSB_Mean) / 1.2
+TRAILBS_Z <- (data$TRAILBS-TRAILBS_Mean) / 49.3
+TRAILBS_Z_INV <- -1*TRAILBS_Z
+DIGSYMWR_Z <- (data$DIGSYMWR-DIGSYMWR_Mean) / 12.3
+
+# Domain Scores #########################################################################
+#doi:10.1016/j.jalz.2017.12.003., doi:10.1080/13607860903071014. (Both Beth Snitz articles), https://www.ncbi.nlm.nih.gov/books/NBK285344/ - for SPANSB in Executive
+data$memory <- (REYIM_Z + REYDE_Z) /2
+data$visiospatial <- (REYCO_Z + BLOCKDES_Z)/2
+data$language <- (BOSTON1_Z +FLUEN_Z) / 2
+data$executive <- (TRAILBS_Z_INV +SPANSB_Z) / 2
+data$attention <- (TRAILAS_Z_INV + SPANSF_Z) / 2
+data$executive_attention <- (TRAILAS_Z_INV + TRAILBS_Z_INV + SPANSF_Z + SPANSB_Z + DIGSYMWR_Z) / 5
+
+#Intraclass Correlation ################################################################
+# Pearson (Linear Correlation between composite and raw scores)
+library("irr")
+#Memory
+REYIM_Pearson_Correlation <- cor(data$memory, data$REYIM, use = "complete.obs")
+REYDE_Pearson_Correlation <- cor(data$memory, data$REYDE, use = "complete.obs")
+
+# Visiospatial
+BLOCKDES_Pearson_Correlation <- cor(data$visiospatial, data$BLOCKDES, use = "complete.obs")
+REYCO_Pearson_Correlation <- cor(data$visiospatial, data$REYCO, use = "complete.obs")
+
+#Langugae
+BOSTON1_Pearson_Correlation <- cor(data$language, data$BOSTON1, use = "complete.obs")
+FLUEN_Pearson_Correlation <- cor(data$language, data$FLUEN, use = "complete.obs")
+
+#Executive
+TRAILBS_Pearson_Correlation <- cor(data$executive, -1*data$TRAILBS, use = "complete.obs")
+SPANSB_Pearson_Correlation <- cor(data$executive, data$SPANSB, use = "complete.obs")
+
+#Attention
+TRAILAS_Pearson_Correlation <- cor(data$attention, -1*data$TRAILAS, use = "complete.obs")
+SPANSF_Pearson_Correlation <- cor(data$attention, data$SPANSF, use = "complete.obs")
+
+#Executive_Attention
+TRAILBS_Combo_Pearson_Correlation <- cor(data$executive_attention, -1*data$TRAILBS, use = "complete.obs")
+TRAILAS_Combo_Pearson_Correlation <- cor(data$executive_attention, -1*data$TRAILAS, use = "complete.obs")
+SPANSF_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSF, use = "complete.obs")
+DIGSYMWR_Combo_Pearson_Correlation <- cor(data$executive_attention, data$DIGSYMWR, use = "complete.obs")
+SPANSB_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSB, use = "complete.obs")
+
+#Interclass Correlation (correlation between z-scores within composite score) ########3
+#https://www.datanovia.com/en/lessons/intraclass-correlation-coefficient-in-r/
+memory_icc_scores <-  cbind(REYIM_Z, REYDE_Z)
+memory_icc_values <- icc(memory_icc_scores, model = "twoway", type = "agreement", unit = "single")
+memory_icc <- memory_icc_values$value
+
+visiospatial_icc_scores <- cbind(REYCO_Z,BLOCKDES_Z)
+visiospatial_icc_values <- icc(visiospatial_icc_scores, model = "twoway", type = "agreement", unit = "single")
+visiospatial_icc <- visiospatial_icc_values$value
+
+language_icc_scores <- cbind(BOSTON1_Z,FLUEN_Z)
+language_icc_values <- icc(language_icc_scores, model = "twoway", type = "consistency", unit = "single")
+language_icc <- language_icc_values$value
+
+executive_icc_scores <- cbind(TRAILBS_Z_INV,SPANSB_Z)
+executive_icc_values <- icc(executive_icc_scores, model = "twoway", type = "consistency", unit = "single")
+executive_icc <- executive_icc_values$value
+
+attention_icc_scores <- cbind(TRAILAS_Z_INV,SPANSF_Z)
+attention_icc_values <- icc(attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
+attention_icc <- attention_icc_values$value
+
+executive_attention_icc_scores <- cbind(TRAILAS_Z_INV,TRAILBS_Z_INV,SPANSF_Z,SPANSB_Z,DIGSYMWR_Z)
+executive_attention_icc_values <- icc(executive_attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
+executive_attention_icc <- executive_attention_icc_values$value
+
+```
+
+``` {r pval_calc, echo = FALSE, include = FALSE}
+#For p-values
+lmp <- function (modelobject) {
+  if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+  f <- summary(modelobject)$fstatistic
+  p <- pf(f[1],f[2],f[3],lower.tail=F)
+  attributes(p) <- NULL
+  return(p)
+}
+```
+
+``` {r raw_hippocampus, echo = FALSE}
+mdl_hippocampus_AI <- lm(Hippocampus_AI ~ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
+
+raw_hippocampus_rsquared <- summary(mdl_hippocampus_AI)$r.squared
+raw_hippocampus_fstat <- summary(mdl_hippocampus_AI)$fstatistic[1]
+raw_hippocampus_df1 <- summary(mdl_hippocampus_AI)$fstatistic[2]
+raw_hippocampus_df2 <- summary(mdl_hippocampus_AI)$fstatistic[3]
+raw_hippocampus_pval <- lmp(mdl_hippocampus_AI)
+```
+
+``` {r raw_DLPFC, echo = FALSE}
+mdl_DLPFC_AI <- lm(DLPFC_AI ~  Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
+
+raw_DLPFC_rsquared <- summary(mdl_DLPFC_AI)$r.squared
+raw_DLPFC_fstat <- summary(mdl_DLPFC_AI)$fstatistic[1]
+raw_DLPFC_df1 <- summary(mdl_DLPFC_AI)$fstatistic[2]
+raw_DLPFC_df2 <- summary(mdl_DLPFC_AI)$fstatistic[3]
+raw_DLPFC_pval <- lmp(mdl_DLPFC_AI)
+```
+
+``` {r Abs_hippocampus, echo = FALSE}
+mdl_Abs_hippocampus_AI <- lm(Abs_Hippocampus_AI ~ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
+
+abs_hippocampus_rsquared <- summary(mdl_Abs_hippocampus_AI)$r.squared
+abs_hippocampus_fstat <- summary(mdl_Abs_hippocampus_AI)$fstatistic[1]
+abs_hippocampus_df1 <- summary(mdl_Abs_hippocampus_AI)$fstatistic[2]
+abs_hippocampus_df2 <- summary(mdl_Abs_hippocampus_AI)$fstatistic[3]
+abs_hippocampus_pval <- lmp(mdl_Abs_hippocampus_AI)
+```
+
+``` {r Abs_DLPFC, echo = FALSE}
+mdl_Abs_DLPFC_AI <- lm(Abs_DLPFC_AI ~ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
+
+abs_DLPFC_rsquared <- summary(mdl_Abs_DLPFC_AI)$r.squared
+abs_DLPFC_fstat <- summary(mdl_Abs_DLPFC_AI)$fstatistic[1]
+abs_DLPFC_df1 <- summary(mdl_Abs_DLPFC_AI)$fstatistic[2]
+abs_DLPFC_df2 <- summary(mdl_Abs_DLPFC_AI)$fstatistic[3]
+abs_DLPFC_pval <- lmp(mdl_Abs_DLPFC_AI)
+
+```
+
+``` {r modelSetUp, echo = FALSE, include = FALSE}
+if (!require("sjPlot")) install.packages("sjPlot")
+library(sjPlot)
+if (!require("kableExtra")) install.packages("kableExtra")
+library(knitr)
+library(kableExtra)
+if (!require("scales")) install.packages("scales")
+library(scales)
+```
+
+# Regression Models:
+
+**Hippocampus Raw Asymmetry Index Data**
+<div style="margin-bottom:100px;">
+``` {r raw_hippocampus_data, echo = FALSE}
+raw_hippocampus_data <- data.frame(Variable = c(paste("F( ", raw_hippocampus_df1, ",", raw_hippocampus_df2,")"),"R^2","p-value"),
+                               Value = c(raw_hippocampus_fstat,raw_hippocampus_rsquared,raw_hippocampus_pval))
+
+kable(raw_hippocampus_data, caption = "Hippocampus Raw AI Model Summary", digits = 3) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+``` {r raw_hippocampus_coefficients, echo = FALSE}
+
+tab_model(mdl_hippocampus_AI, dv.labels = "Hippocampus Raw AI",
+          pred.labels = c("Intercept","Age at Visit", "Sex", "Race",
+                          "Education (years)", "FDG Global", 
+                          "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)
+```
+</div>
+
+**DLPFC Raw Asymmetry Index Data** 
+<div style="margin-bottom:100px;">
+``` {r raw_DLPFC_data, echo = FALSE}
+raw_DLPFC_data <- data.frame(Variable = c(paste("F( ", raw_DLPFC_df1, ",", raw_DLPFC_df2,")"),"R^2","p-value"),
+                               Value = c(raw_DLPFC_fstat,raw_DLPFC_rsquared,raw_DLPFC_pval))
+
+kable(raw_DLPFC_data, caption = "DLPFC Raw AI Model Summary", digits = 3) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+``` {r raw_DLPFC_coefficients, echo = FALSE}
+
+tab_model(mdl_DLPFC_AI, dv.labels = "DLPFC Raw AI",
+          pred.labels = c("Intercept","Age at Visit", "Sex", "Race",
+                          "Education (years)", "FDG Global", 
+                          "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)
+```
+</div>
+
+
+**Hippocampus Absolute Asymmetry Index Data**
+<div style="margin-bottom:100px;">
+``` {r abs_hippocampus_data, echo = FALSE}
+abs_hippocampus_data <- data.frame(Variable = c(paste("F( ", abs_hippocampus_df1, ",", abs_hippocampus_df2,")"),"R^2","p-value"),
+                               Value = c(abs_hippocampus_fstat,abs_hippocampus_rsquared,abs_hippocampus_pval))
+
+kable(abs_hippocampus_data, caption = "Hippocampus Absolute AI Model Summary", digits = 3) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+
+```
+
+``` {r abs_hippocampus_coefficients, echo = FALSE}
+tab_model(mdl_Abs_hippocampus_AI, dv.labels = "Hippocampus Absolute AI",
+          pred.labels = c("Intercept","Age at Visit", "Sex", "Race",
+                          "Education (years)", "FDG Global", 
+                          "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)
+```
+</div>
+
+**DLPFC Absolute Asymmetry Index Data** 
+<div style="margin-bottom:100px;">
+``` {r abs_DLPFC_data, echo = FALSE}
+abs_DLPFC_data <- data.frame(Variable = c(paste("F( ", abs_DLPFC_df1, ",", abs_DLPFC_df2,")"),"R^2","p-value"),
+                               Value = c(abs_DLPFC_fstat,abs_DLPFC_rsquared,abs_DLPFC_pval))
+
+kable(abs_DLPFC_data, caption = "DLPFC Absolute AI Model Summary", digits = 3) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+``` {r abs_DLPFC_coefficients, echo = FALSE}
+tab_model(mdl_Abs_DLPFC_AI, dv.labels = "DLPFC Absolute AI",
+          pred.labels = c("Intercept","Age at Visit", "Sex", "Race",
+                          "Education (years)", "FDG Global", 
+                          "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)
+```
+</div>
+
+``` {r demographicsData, echo = FALSE}
+# Demographics Table ###############################################################
+
+#Calculate Data - Some data missing
+num_subjects <- nrow(data)
+
+n_education <- length(data$Education_cat[!is.na(data$Education_cat)])
+mean_education <- mean(data$Education, na.rm = TRUE)
+stdv_education <- sd(data$Education, na.rm = TRUE)
+education_over_12 <- sum(data$Education_cat, na.rm = TRUE)
+education_under_12 <- length(data$Education_cat)-sum(data$Education_cat, na.rm = TRUE) - sum(is.na(data$Education_cat))
+percent_over_12 <- education_over_12 / (length(data$Education_cat) - sum(is.na(data$Education_cat)))
+percent_under_12 <- education_under_12 / (length(data$Education_cat) - sum(is.na(data$Education_cat)))
+
+n_age <- length(data$Age_CurrentVisit[!is.na(data$Age_CurrentVisit)])
+mean_age <- mean(data$Age_CurrentVisit, na.rm = TRUE)
+age_stdv <- sd(data$Age_CurrentVisit, na.rm = TRUE)
+
+n_sex <- length(data$Sex_cat[!is.na(data$Sex_cat)])
+male_count <- sum(data$Sex == "Male", na.rm = TRUE)
+percent_male <- male_count / (length(data$Sex) - sum(data$Sex == ""))
+female_count <- sum(data$Sex == "Female", na.rm = TRUE)
+percent_female <- female_count / (length(data$Sex) - sum(data$Sex == ""))
+
+n_race <- length(data$Race_cat[!is.na(data$Race_cat)])
+white_count <- sum(data$Race == "White")
+percent_white <- white_count / (length(data$Race) - sum(data$Race == ""))
+black_count <- sum(data$Race == "Black")
+percent_black <- black_count / (length(data$Race) - sum(data$Race == ""))
+asian_count <- sum(data$Race == "Asian")
+percent_asian <- asian_count / (length(data$Race) - sum(data$Race == ""))
+
+```
+
+
+**Cohort Demographics:**
+
+
+``` {r, echo = FALSE}
+#Make Table
+demographic_data <- data.frame(Variable = c("Total_Subjects","n", "Mean", "Standard Deviation", "Over 12 Years", "Under 12 Years", "n","Mean", "Standard Deviation", "n","Male Count", "Female Count", "n","White Count", "Black Count", "Asian Count"),
+                               Value = c(num_subjects, n_education, mean_education, stdv_education, education_over_12, education_under_12,n_age, mean_age, age_stdv, n_sex, male_count, female_count, n_race, white_count,black_count,asian_count),
+                               Percent = c("", "", "","", label_percent()(percent_over_12), label_percent()(percent_under_12),"","","","",label_percent()(percent_male), label_percent()(percent_female),"",label_percent()(percent_white),label_percent()(percent_black),label_percent()(percent_asian)))
+
+kable(demographic_data, caption = "Demographic data for normal aging", digits = 2) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left") %>%
+                pack_rows("Education", 2,6) %>%
+                pack_rows("Age", 7,9) %>%
+                pack_rows("Sex", 10,12) %>%
+                pack_rows("Race", 13,16)
+
+```
+
+
+
+
+
