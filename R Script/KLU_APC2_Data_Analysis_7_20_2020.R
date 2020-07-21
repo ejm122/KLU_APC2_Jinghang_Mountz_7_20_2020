@@ -231,25 +231,6 @@ summary(mdl_executive_attention_abs_AI)
 
 #################################################################################
 
-
-
-Pearson_Correlation_data <- data.frame(Variable = c("Modified Rey Figure Delayed Recall","Modified Rey Figure Immediate Recall", "Modified Block Design","Modified Rey Figure Copy","Boston Naming Test (30-item)","Fluency - Animals","Trails B","Digit Span Backward","Trails A","Digit Span Forward","Digit Symbol Substitution Test","Trails A","Digit Span Forward","Trails B","Digit Span Backward"),
-                                       Pearson_Correlation = c(REYDE_Pearson_Correlation,REYIM_Pearson_Correlation,BLOCKDES_Pearson_Correlation,REYCO_Pearson_Correlation, BOSTON1_Pearson_Correlation, FLUEN_Pearson_Correlation, TRAILBS_Pearson_Correlation,SPANSB_Pearson_Correlation, TRAILAS_Pearson_Correlation,SPANSF_Pearson_Correlation, DIGSYMWR_Combo_Pearson_Correlation, TRAILAS_Combo_Pearson_Correlation,SPANSF_Combo_Pearson_Correlation,TRAILBS_Combo_Pearson_Correlation,SPANSB_Combo_Pearson_Correlation))
-
-kable(Pearson_Correlation_data, caption = "Pearson Interclass Correlation Values for Cognitive Domains. Measures linear correlation between raw cognitive test scores and the corresponding composite cognitive domain score.", digits = 2) %>%
-  kable_styling(bootstrap_options = "striped", full_width = F, position = "float_right") %>%
-  pack_rows("Memory Domain",1,2) %>%
-  pack_rows("Visiospatial Domain",3,4) %>%
-  pack_rows("Language Domain",5,6) %>%
-  pack_rows("Executive Domain",7,8) %>%
-  pack_rows("Attention Domain",9,10) %>%
-  pack_rows("Executive_Attention Domain",11,15)
-
-executive_attention_values <- data.frame("DIGSYMWR_Pearson" = DIGSYMWR_Combo_Pearson_Correlation, "TRAILAS_Pearson" = TRAILAS_Combo_Pearson_Correlation, "SPANSF_Pearson" = SPANSF_Combo_Pearson_Correlation, "TRAILBS_Pearson" = TRAILBS_Combo_Pearson_Correlation, "SPANSB_Pearson" = SPANSB_Combo_Pearson_Correlation)
-formattable(executive_attention_values, align = "c", caption = "Executive and Attention domain Correlations. Pearson correlations were calcuated between raw scores and domain values.  ICC values were calculated between z-scores of tests within the same domain.", header = c("Pearson Correlations", ""))
-
-
-
 save.image(file = "~/Desktop/RStudio Scripts/AI_Results_2020_06_23.rda") #path for spreadsheet - saves all variables
 
 
