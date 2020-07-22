@@ -205,7 +205,7 @@ lmp <- function (modelobject) {
 ```
 
 ``` {r raw_hippocampus, echo = FALSE}
-# AI Regressions ##################################################################
+# Regressions ##############################################################################################################################
 
 mdl_hippocampus_AI <- lm(Hippocampus_AI ~ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
 
@@ -367,7 +367,7 @@ attention_abs_df2 <- summary(mdl_attention_abs_AI)$fstatistic[3]
 attention_abs_pval <- lmp(mdl_attention_abs_AI)
 ```
 
-``` {r executive_attention_abs,echo = FALSE}
+``` {r executive_attention_abs, echo = FALSE}
 mdl_executive_attention_abs_AI <- lm(executive_attention ~ FaceName_PostScanAccuracy+Abs_DLPFC_AI + Abs_Hippocampus_AI+ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
 
 executive_attention_abs_rsquared <- summary(mdl_executive_attention_abs_AI)$r.squared
@@ -375,6 +375,10 @@ executive_attention_abs_fstat <- summary(mdl_executive_attention_abs_AI)$fstatis
 executive_attention_abs_df1 <- summary(mdl_executive_attention_abs_AI)$fstatistic[2]
 executive_attention_abs_df2 <- summary(mdl_executive_attention_abs_AI)$fstatistic[3]
 executive_attention_abs_pval <- lmp(mdl_executive_attention_abs_AI)
+```
+
+``` { r new_model, echo = FALSE}
+
 ```
 
 ``` {r modelSetUp, echo = FALSE, include = FALSE}
@@ -756,6 +760,28 @@ kable(executive_attention_abs_data, caption = "Executive_Attention Absolute AI M
 
 ``` {r executive_attention_abs_coefficients, echo = FALSE}
 tab_model(mdl_executive_attention_abs_AI, dv.labels = "Executive_Attention - Absolute AI",
+          pred.labels = c("Intercept","Task Accuracy","DLPFC Absolute AI", "Hippocampus Absolute AI", "Age at Visit", "Sex", "Race",
+                          "Education (years)", "FDG Global", 
+                          "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)
+```
+</div>
+
+
+# FWHM Regressions
+
+**New Model**
+
+<div style="margin-bottom:100px;">
+``` {r new_model_data, echo = FALSE}
+new_model_data <- data.frame(Variable = c(paste("F( ", new_model_df1, ",", new_model_df2,")"),"R^2","p-value"),
+                               Value = c(new_model_fstat,new_model_rsquared, new_model_pval))
+
+kable(new_model_data, caption = "New Model Name Summary", digits = 3) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+``` {r executive_attention_abs_coefficients, echo = FALSE}
+tab_model(new_model, dv.labels = "New Model Title",
           pred.labels = c("Intercept","Task Accuracy","DLPFC Absolute AI", "Hippocampus Absolute AI", "Age at Visit", "Sex", "Race",
                           "Education (years)", "FDG Global", 
                           "PiB Global Status", "APOE Status"), show.r2 = FALSE, show.ci = FALSE)

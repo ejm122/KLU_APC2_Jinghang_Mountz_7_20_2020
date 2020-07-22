@@ -1,25 +1,17 @@
+## @knitr CollectData
 rm(list=ls())
 dev.off()
-pacman::p_load(rio)
+pacman::p_load(pacman, rio) 
 library(tibble)
 # IMPORTING Data ###########################################################
-data <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/KLU_APC2_Master_2020_07_01.xlsx")
-Scan_Number <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/NormalAging_DataGathering.xlsx")
-activation <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/activ_values.txt")
-AI <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/AI.txt")
-FWHM <- import("~/Desktop/GitHub/KLU_APC2_Jinghang_Mountz_7_20_2020/Appending_to_Master/FWHM.txt")
+data <- import("GitHub/Mean_Activation_AI/Appending_to_Master/KLU_APC2_Master_2020_07_01.xlsx")
+activation <- import("GitHub/Mean_Activation_AI/Appending_to_Master/activ_values.txt")
+AI <- import("GitHub/Mean_Activation_AI/Appending_to_Master/AI.txt")
+FWHM <- import("GitHub/Mean_Activation_AI/Appending_to_Master/activ_deactiv_radius.txt")
 FWHM <- abs(FWHM)
 # Filter Data ##############################################################
-data <- data[-c(which(data$FaceNames_Exclude == 'Yes')),] #Exclude for scanning issues
-
-list <- match(Scan_Number$ScanID,data$Vault_Scan_ID) #Only include 1 scan/subject
-index <- which(list!=0,arr.ind = T)
-list <- na.omit(match(Scan_Number$ScanID, data$Vault_Scan_ID))
-data$Scan_Number <- NA
-data$Scan_Number[list] <- Scan_Number$`Scan Number`[index]
-data <- data[c(which(data$Scan_Number == 1)),]
-
-list <- match(activation$Scan_ID,data$Vault_Scan_ID) #Match up all calculated valuese with correct scan
+data <- data[is.na(data$FaceNames_Exclude) & data$Visit_Relative == 1,] #Issues with face name data and only 1 scan/subject - 87 observations
+list <- match(activation$Scan_ID,data$Vault_Scan_ID)
 index <- which(list!=0,arr.ind = T)
 list <- na.omit(match(activation$Scan_ID, data$Vault_Scan_ID))
 
@@ -47,7 +39,7 @@ data$Right_DLPFC_Activation[list] <- activation[,6][index]
 data$Hippocampus_AI[list] <- AI[,3][index]
 data$DLPFC_AI[list] <- AI[,4][index]
 
-data$Left_Hippocampus_FWHM[list] <- FWHM[,3][index] ## look at
+data$Left_Hippocampus_FWHM[list] <- FWHM[,3]
 data$Right_Hippocampus_FWHM[list] <- FWHM[,4]
 data$Left_DLPFC_FWHM[list] <- FWHM[,5]
 data$Right_DLPFC_FWHM[list] <- FWHM[,6]
@@ -169,6 +161,32 @@ SPANSF_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSF, u
 DIGSYMWR_Combo_Pearson_Correlation <- cor(data$executive_attention, data$DIGSYMWR, use = "complete.obs")
 SPANSB_Combo_Pearson_Correlation <- cor(data$executive_attention, data$SPANSB, use = "complete.obs")
 
+#Interclass Correlation (correlation between z-scores within composite score) ########3
+#https://www.datanovia.com/en/lessons/intraclass-correlation-coefficient-in-r/
+memory_icc_scores <-  cbind(REYIM_Z, REYDE_Z)
+memory_icc_values <- icc(memory_icc_scores, model = "twoway", type = "agreement", unit = "single")
+memory_icc <- memory_icc_values$value
+
+visiospatial_icc_scores <- cbind(REYCO_Z,BLOCKDES_Z)
+visiospatial_icc_values <- icc(visiospatial_icc_scores, model = "twoway", type = "agreement", unit = "single")
+visiospatial_icc <- visiospatial_icc_values$value
+
+language_icc_scores <- cbind(BOSTON1_Z,FLUEN_Z)
+language_icc_values <- icc(language_icc_scores, model = "twoway", type = "consistency", unit = "single")
+language_icc <- language_icc_values$value
+
+executive_icc_scores <- cbind(TRAILBS_Z_INV,SPANSB_Z)
+executive_icc_values <- icc(executive_icc_scores, model = "twoway", type = "consistency", unit = "single")
+executive_icc <- executive_icc_values$value
+
+attention_icc_scores <- cbind(TRAILAS_Z_INV,SPANSF_Z)
+attention_icc_values <- icc(attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
+attention_icc <- attention_icc_values$value
+
+executive_attention_icc_scores <- cbind(TRAILAS_Z_INV,TRAILBS_Z_INV,SPANSF_Z,SPANSB_Z,DIGSYMWR_Z)
+executive_attention_icc_values <- icc(executive_attention_icc_scores, model = "twoway", type = "consistency", unit = "single")
+executive_attention_icc <- executive_attention_icc_values$value
+
 # Association with AI ####################################################################
 mdl_hippocampus_AI <- lm(Hippocampus_AI ~ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
 summary(mdl_hippocampus_AI)
@@ -229,9 +247,9 @@ summary(mdl_attention_abs_AI)
 mdl_executive_attention_abs_AI <- lm(executive_attention ~ FaceName_PostScanAccuracy+Abs_DLPFC_AI + Abs_Hippocampus_AI+ Age_CurrentVisit+Sex_cat+Race_cat+Education_cat+FDG_SUVR_GTM_FS_Global+PiB_STATUS_CODE+APOE_CODE, data = data)
 summary(mdl_executive_attention_abs_AI)
 
-#################################################################################
+###############################################################################
 
-save.image(file = "~/Desktop/RStudio Scripts/AI_Results_2020_06_23.rda") #path for spreadsheet - saves all variables
+save.image(file = "~/Desktop/RStudio Scripts/KLU_APC2_Data_Analysis_7_22_2020") #path for spreadsheet - saves all variables
 
 
 
